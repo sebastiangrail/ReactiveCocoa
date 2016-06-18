@@ -185,19 +185,20 @@ public final class QueueScheduler: DateSchedulerType {
 		precondition(repeatingEvery >= 0)
 		precondition(leeway >= 0)
 
-		// FIXME:
-		return nil
-//		let nsecInterval = repeatingEvery * Double(NSEC_PER_SEC)
-//		let nsecLeeway = leeway * Double(NSEC_PER_SEC)
-//
-//		let timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue)
-//		dispatch_source_set_timer(timer, wallTimeWithDate(date), UInt64(nsecInterval), UInt64(nsecLeeway))
-//		dispatch_source_set_event_handler(timer, action)
-//		dispatch_resume(timer)
-//
-//		return ActionDisposable {
-//			dispatch_source_cancel(timer)
-//		}
+		let nsecInterval = repeatingEvery * Double(NSEC_PER_SEC)
+		let nsecLeeway = leeway * Double(NSEC_PER_SEC)
+
+		let timer = DispatchSource.timer(flags: [], queue: queue)
+		timer.scheduleRepeating(
+			wallDeadline: wallTimeWithDate(date: date),
+			interval: DispatchTimeInterval.nanoseconds(Int(nsecInterval)),
+			leeway: DispatchTimeInterval.nanoseconds(Int(nsecLeeway)))
+		timer.setEventHandler(handler: action)
+		timer.resume()
+
+		return ActionDisposable {
+			timer.cancel()
+		}
 	}
 }
 

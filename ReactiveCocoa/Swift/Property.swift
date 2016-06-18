@@ -224,9 +224,7 @@ public func combineLatest<S: Sequence where S.Iterator.Element: PropertyType>(pr
 	if let first = generator.next() {
 		let initial = first.map { [$0] }
 		return IteratorSequence(generator).reduce(initial) { property, next in
-			// FIXME
-			fatalError() as! AnyProperty<[S.Iterator.Element.Value]>
-//			property?.combineLatestWith(next).map { tuple in tuple.0 + [tuple.1] }
+			property.combineLatestWith(other: next).map { tuple in tuple.0 + [tuple.1] }
 		}
 	}
 
@@ -320,9 +318,7 @@ public func zip<S: Sequence where S.Iterator.Element: PropertyType>(properties: 
 	if let first = generator.next() {
 		let initial = first.map { [$0] }
 		return IteratorSequence(generator).reduce(initial) { property, next in
-			// FIXME
-			fatalError() as! AnyProperty<[S.Iterator.Element.Value]>
-//			property?.zipWith(next).map { $0.0 + [$0.1] }
+			property.zipWith(other: next).map { $0.0 + [$0.1] }
 		}
 	}
 
