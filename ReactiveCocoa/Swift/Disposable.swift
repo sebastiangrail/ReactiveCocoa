@@ -45,7 +45,7 @@ public final class ActionDisposable: Disposable {
 	}
 
 	public func dispose() {
-		let oldAction = action.swap(nil)
+		let oldAction = action.swap(newValue: nil)
 		oldAction?()
 	}
 }
@@ -76,9 +76,9 @@ public final class CompositeDisposable: Disposable {
 		/// This is useful to minimize memory growth, by removing disposables
 		/// that are no longer needed.
 		public func remove() {
-			if let token = bagToken.swap(nil) {
+			if let token = bagToken.swap(newValue: nil) {
 				disposable?.disposables.modify { bag in
-					bag?.removeValueForToken(token)
+					bag?.removeValueForToken(token: token)
 				}
 			}
 		}
@@ -90,11 +90,11 @@ public final class CompositeDisposable: Disposable {
 
 	/// Initializes a CompositeDisposable containing the given sequence of
 	/// disposables.
-	public init<S: SequenceType where S.Generator.Element == Disposable>(_ disposables: S) {
+	public init<S: Sequence where S.Iterator.Element == Disposable>(_ disposables: S) {
 		var bag: Bag<Disposable> = Bag()
 
 		for disposable in disposables {
-			bag.insert(disposable)
+			bag.insert(value: disposable)
 		}
 
 		self.disposables = Atomic(bag)
@@ -102,7 +102,7 @@ public final class CompositeDisposable: Disposable {
 	
 	/// Initializes a CompositeDisposable containing the given sequence of
 	/// disposables.
-	public convenience init<S: SequenceType where S.Generator.Element == Disposable?>(_ disposables: S) {
+	public convenience init<S: Sequence where S.Iterator.Element == Disposable?>(_ disposables: S) {
 		self.init(disposables.flatMap { $0 })
 	}
 
@@ -112,8 +112,8 @@ public final class CompositeDisposable: Disposable {
 	}
 
 	public func dispose() {
-		if let ds = disposables.swap(nil) {
-			for d in ds.reverse() {
+		if let ds = disposables.swap(newValue: nil) {
+			for d in ds.reversed() {
 				d.dispose()
 			}
 		}
@@ -128,7 +128,7 @@ public final class CompositeDisposable: Disposable {
 
 		var handle: DisposableHandle? = nil
 		disposables.modify { ds in
-			if let token = ds?.insert(d) {
+			if let token = ds?.insert(value: d) {
 				handle = DisposableHandle(bagToken: token, disposable: self)
 			}
 		}
@@ -143,7 +143,7 @@ public final class CompositeDisposable: Disposable {
 
 	/// Adds an ActionDisposable to the list.
 	public func addDisposable(action: () -> Void) -> DisposableHandle {
-		return addDisposable(ActionDisposable(action: action))
+		return addDisposable(d: ActionDisposable(action: action))
 	}
 }
 
@@ -214,7 +214,7 @@ public final class SerialDisposable: Disposable {
 	}
 
 	public func dispose() {
-		let orig = state.swap(State(innerDisposable: nil, disposed: true))
+		let orig = state.swap(newValue: State(innerDisposable: nil, disposed: true))
 		orig.innerDisposable?.dispose()
 	}
 }
@@ -228,7 +228,7 @@ public final class SerialDisposable: Disposable {
 ///         .start(observer)
 ///
 public func +=(lhs: CompositeDisposable, rhs: Disposable?) -> CompositeDisposable.DisposableHandle {
-	return lhs.addDisposable(rhs)
+	return lhs.addDisposable(d: rhs)
 }
 
 /// Adds the right-hand-side `ActionDisposable` to the left-hand-side
@@ -237,5 +237,5 @@ public func +=(lhs: CompositeDisposable, rhs: Disposable?) -> CompositeDisposabl
 ///     disposable += { ... }
 ///
 public func +=(lhs: CompositeDisposable, rhs: () -> ()) -> CompositeDisposable.DisposableHandle {
-	return lhs.addDisposable(rhs)
+	return lhs.addDisposable(action: rhs)
 }

@@ -9,7 +9,7 @@
 import Foundation
 import enum Result.NoError
 
-extension NSNotificationCenter {
+extension NotificationCenter {
 	/// Returns a producer of notifications posted that match the given criteria.
 	/// If the `object` is deallocated before starting the producer, it will 
 	/// terminate immediatelly with an Interrupted event. Otherwise, the producer
@@ -24,8 +24,8 @@ extension NSNotificationCenter {
 				return
 			}
 
-			let notificationObserver = self.addObserverForName(name, object: object, queue: nil) { notification in
-				observer.sendNext(notification)
+			let notificationObserver = self.addObserver(forName: name.map { NSNotification.Name(rawValue: $0) }, object: object, queue: nil) { notification in
+				observer.sendNext(value: notification)
 			}
 
 			disposable += {
@@ -37,17 +37,17 @@ extension NSNotificationCenter {
 
 private let defaultSessionError = NSError(domain: "org.reactivecocoa.ReactiveCocoa.rac_dataWithRequest", code: 1, userInfo: nil)
 
-extension NSURLSession {
+extension URLSession {
 	/// Returns a producer that will execute the given request once for each
 	/// invocation of start().
-	public func rac_dataWithRequest(request: NSURLRequest) -> SignalProducer<(NSData, NSURLResponse), NSError> {
+	public func rac_dataWithRequest(request: NSURLRequest) -> SignalProducer<(NSData, URLResponse), NSError> {
 		return SignalProducer { observer, disposable in
-			let task = self.dataTaskWithRequest(request) { data, response, error in
+			let task = self.dataTask(with: request as URLRequest) { data, response, error in
 				if let data = data, response = response {
-					observer.sendNext((data, response))
+					observer.sendNext(value: (data, response))
 					observer.sendCompleted()
 				} else {
-					observer.sendFailed(error ?? defaultSessionError)
+					observer.sendFailed(error: error ?? defaultSessionError)
 				}
 			}
 

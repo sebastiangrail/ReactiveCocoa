@@ -24,7 +24,7 @@ extension Optional: OptionalType {
 extension SignalType {
 	/// Turns each value into an Optional.
 	internal func optionalize() -> Signal<Value?, Error> {
-		return map(Optional.init)
+		return map(transform: Optional.init)
 	}
 }
 

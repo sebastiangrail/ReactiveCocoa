@@ -20,23 +20,23 @@ extension RACScheduler: DateSchedulerType {
 	}
 
 	public func scheduleAfter(date: NSDate, action: () -> Void) -> Disposable? {
-		return self.after(date, schedule: action)
+		return self.after(date as Date!, schedule: action)
 	}
 
-	public func scheduleAfter(date: NSDate, repeatingEvery: NSTimeInterval, withLeeway: NSTimeInterval, action: () -> Void) -> Disposable? {
-		return self.after(date, repeatingEvery: repeatingEvery, withLeeway: withLeeway, schedule: action)
+	public func scheduleAfter(date: NSDate, repeatingEvery: TimeInterval, withLeeway: TimeInterval, action: () -> Void) -> Disposable? {
+		return self.after(date as Date!, repeatingEvery: repeatingEvery, withLeeway: withLeeway, schedule: action)
 	}
 }
 
 extension ImmediateScheduler {
 	public func toRACScheduler() -> RACScheduler {
-		return RACScheduler.immediateScheduler()
+		return RACScheduler.immediate()
 	}
 }
 
 extension UIScheduler {
 	public func toRACScheduler() -> RACScheduler {
-		return RACScheduler.mainThreadScheduler()
+		return RACScheduler.mainThread()
 	}
 }
 
@@ -56,11 +56,11 @@ extension RACSignal {
 	public func toSignalProducer(file: String = #file, line: Int = #line) -> SignalProducer<AnyObject?, NSError> {
 		return SignalProducer { observer, disposable in
 			let next = { obj in
-				observer.sendNext(obj)
+				observer.sendNext(value: obj)
 			}
 
 			let failed = { nsError in
-				observer.sendFailed(nsError ?? defaultNSError("Nil RACSignal error", file: file, line: line))
+				observer.sendFailed(error: nsError ?? defaultNSError(message: "Nil RACSignal error", file: file, line: line))
 			}
 
 			let completed = {
@@ -118,16 +118,16 @@ extension SignalProducerType where Value: OptionalType, Value.Wrapped: AnyObject
 	public func toRACSignal() -> RACSignal {
 		// This special casing of `Error: NSError` is a workaround for rdar://22708537
 		// which causes an NSError's UserInfo dictionary to get discarded
-		// during a cast from ErrorType to NSError in a generic function
+		// during a cast from ErrorProtocol to NSError in a generic function
 		return RACSignal.createSignal { subscriber in
 			let selfDisposable = self.start { event in
 				switch event {
 				case let .Next(value):
-					subscriber.sendNext(value.optional)
+					subscriber?.sendNext(value.optional)
 				case let .Failed(error):
-					subscriber.sendError(error)
+					subscriber?.sendError(error)
 				case .Completed:
-					subscriber.sendCompleted()
+					subscriber?.sendCompleted()
 				case .Interrupted:
 					break
 				}
@@ -180,16 +180,16 @@ extension SignalType where Value: OptionalType, Value.Wrapped: AnyObject, Error:
 	public func toRACSignal() -> RACSignal {
 		// This special casing of `Error: NSError` is a workaround for rdar://22708537
 		// which causes an NSError's UserInfo dictionary to get discarded
-		// during a cast from ErrorType to NSError in a generic function
+		// during a cast from ErrorProtocol to NSError in a generic function
 		return RACSignal.createSignal { subscriber in
 			let selfDisposable = self.observe { event in
 				switch event {
 				case let .Next(value):
-					subscriber.sendNext(value.optional)
+					subscriber?.sendNext(value.optional)
 				case let .Failed(error):
-					subscriber.sendError(error)
+					subscriber?.sendError(error)
 				case .Completed:
-					subscriber.sendCompleted()
+					subscriber?.sendCompleted()
 				case .Interrupted:
 					break
 				}
@@ -210,21 +210,23 @@ extension RACCommand {
 	/// Note that the returned Action will not necessarily be marked as
 	/// executing when the command is. However, the reverse is always true:
 	/// the RACCommand will always be marked as executing when the action is.
-	public func toAction(file: String = #file, line: Int = #line) -> Action<AnyObject?, AnyObject?, NSError> {
-		let enabledProperty = MutableProperty(true)
-
-		enabledProperty <~ self.enabled.toSignalProducer()
-			.map { $0 as! Bool }
-			.flatMapError { _ in SignalProducer<Bool, NoError>(value: false) }
-
-		return Action(enabledIf: enabledProperty) { input -> SignalProducer<AnyObject?, NSError> in
-			let executionSignal = RACSignal.`defer` {
-				return self.execute(input)
-			}
-
-			return executionSignal.toSignalProducer(file, line: line)
-		}
-	}
+	
+	// FIXME:
+//	public func toAction(file: String = #file, line: Int = #line) -> Action<AnyObject?, AnyObject?, NSError> {
+//		let enabledProperty = MutableProperty(true)
+//
+//		enabledProperty <~ self.enabled.toSignalProducer()
+//			.map { $0 as! Bool }
+//			.flatMapError { _ in SignalProducer<Bool, NoError>(value: false) }
+//
+//		return Action(enabledIf: enabledProperty) { input -> SignalProducer<AnyObject?, NSError> in
+//			let executionSignal = RACSignal.`defer` {
+//				return self.execute(input)
+//			}
+//
+//			return executionSignal.toSignalProducer(file, line: line)
+//		}
+//	}
 }
 
 extension ActionType {
@@ -240,10 +242,10 @@ extension ActionType {
 /// Note that the returned command will not necessarily be marked as
 /// executing when the action is. However, the reverse is always true:
 /// the Action will always be marked as executing when the RACCommand is.
-public func toRACCommand<Output: AnyObject, Error>(action: Action<AnyObject?, Output, Error>) -> RACCommand {
+public func toRACCommand<Output: AnyObject, Error>(action: Action<AnyObject?, Output, Error>) -> RACCommand<AnyObject> {
 	return RACCommand(enabled: action.commandEnabled) { input -> RACSignal in
 		return action
-			.apply(input)
+			.apply(input: input)
 			.toRACSignal()
 	}
 }
@@ -253,10 +255,10 @@ public func toRACCommand<Output: AnyObject, Error>(action: Action<AnyObject?, Ou
 /// Note that the returned command will not necessarily be marked as
 /// executing when the action is. However, the reverse is always true:
 /// the Action will always be marked as executing when the RACCommand is.
-public func toRACCommand<Output: AnyObject, Error>(action: Action<AnyObject?, Output?, Error>) -> RACCommand {
+public func toRACCommand<Output: AnyObject, Error>(action: Action<AnyObject?, Output?, Error>) -> RACCommand<AnyObject> {
 	return RACCommand(enabled: action.commandEnabled) { input -> RACSignal in
 		return action
-			.apply(input)
+			.apply(input: input)
 			.toRACSignal()
 	}
 }

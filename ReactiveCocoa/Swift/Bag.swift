@@ -47,9 +47,9 @@ public struct Bag<Element> {
 	public mutating func removeValueForToken(token: RemovalToken) {
 		if let identifier = token.identifier {
 			// Removal is more likely for recent objects than old ones.
-			for i in elements.indices.reverse() {
+			for i in elements.indices.reversed() {
 				if elements[i].identifier == identifier {
-					elements.removeAtIndex(i)
+					elements.remove(at: i)
 					token.identifier = nil
 					break
 				}
@@ -70,7 +70,7 @@ public struct Bag<Element> {
 	}
 }
 
-extension Bag: CollectionType {
+extension Bag: Collection {
 	public typealias Index = Array<Element>.Index
 
 	public var startIndex: Index {
@@ -83,6 +83,10 @@ extension Bag: CollectionType {
 
 	public subscript(index: Index) -> Element {
 		return elements[index].value
+	}
+	
+	public func index(after i: Bag.Index) -> Bag.Index {
+		return i.advanced(by: 1)
 	}
 }
 

@@ -9,7 +9,7 @@
 /// A protocol for type-constrained extensions of `Observer`.
 public protocol ObserverType {
 	associatedtype Value
-	associatedtype Error: ErrorType
+	associatedtype Error: ErrorProtocol
 
 	/// Puts a `Next` event into the given observer.
 	func sendNext(value: Value)
@@ -26,8 +26,8 @@ public protocol ObserverType {
 
 /// An Observer is a simple wrapper around a function which can receive Events
 /// (typically from a Signal).
-public struct Observer<Value, Error: ErrorType> {
-	public typealias Action = Event<Value, Error> -> Void
+public struct Observer<Value, Error: ErrorProtocol> {
+	public typealias Action = (Event<Value, Error>) -> Void
 
 	public let action: Action
 
@@ -35,7 +35,7 @@ public struct Observer<Value, Error: ErrorType> {
 		self.action = action
 	}
 
-	public init(failed: (Error -> Void)? = nil, completed: (() -> Void)? = nil, interrupted: (() -> Void)? = nil, next: (Value -> Void)? = nil) {
+	public init(failed: ((Error) -> Void)? = nil, completed: (() -> Void)? = nil, interrupted: (() -> Void)? = nil, next: ((Value) -> Void)? = nil) {
 		self.init { event in
 			switch event {
 			case let .Next(value):

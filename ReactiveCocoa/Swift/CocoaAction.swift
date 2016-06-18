@@ -5,7 +5,7 @@ import Foundation
 public final class CocoaAction: NSObject {
 	/// The selector that a caller should invoke upon a CocoaAction in order to
 	/// execute it.
-	public static let selector: Selector = #selector(CocoaAction.execute(_:))
+	public static let selector: Selector = #selector(CocoaAction.execute(input:))
 	
 	/// Whether the action is enabled.
 	///
@@ -26,26 +26,26 @@ public final class CocoaAction: NSObject {
 	/// transforming the object given to execute().
 	public init<Input, Output, Error>(_ action: Action<Input, Output, Error>, _ inputTransform: AnyObject? -> Input) {
 		_execute = { input in
-			let producer = action.apply(inputTransform(input))
+			let producer = action.apply(input: inputTransform(input))
 			producer.start()
 		}
 		
 		super.init()
 		
 		disposable += action.enabled.producer
-			.observeOn(UIScheduler())
+			.observeOn(scheduler: UIScheduler())
 			.startWithNext { [weak self] value in
-				self?.willChangeValueForKey("enabled")
+				self?.willChangeValue(forKey: "enabled")
 				self?.enabled = value
-				self?.didChangeValueForKey("enabled")
+				self?.didChangeValue(forKey: "enabled")
 		}
 		
 		disposable += action.executing.producer
-			.observeOn(UIScheduler())
+			.observeOn(scheduler: UIScheduler())
 			.startWithNext { [weak self] value in
-				self?.willChangeValueForKey("executing")
+				self?.willChangeValue(forKey: "executing")
 				self?.executing = value
-				self?.didChangeValueForKey("executing")
+				self?.didChangeValue(forKey: "executing")
 		}
 	}
 	
@@ -65,7 +65,7 @@ public final class CocoaAction: NSObject {
 		_execute(input)
 	}
 	
-	public override class func automaticallyNotifiesObserversForKey(key: String) -> Bool {
+	public override class func automaticallyNotifiesObservers(forKey key: String) -> Bool {
 		return false
 	}
 }

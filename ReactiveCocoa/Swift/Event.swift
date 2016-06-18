@@ -10,7 +10,7 @@
 ///
 /// Signals must conform to the grammar:
 /// `Next* (Failed | Completed | Interrupted)?`
-public enum Event<Value, Error: ErrorType> {
+public enum Event<Value, Error: ErrorProtocol> {
 	/// A value provided by the signal.
 	case Next(Value)
 
@@ -39,7 +39,7 @@ public enum Event<Value, Error: ErrorType> {
 	}
 
 	/// Lifts the given function over the event's value.
-	public func map<U>(f: Value -> U) -> Event<U, Error> {
+	public func map<U>(f: (Value) -> U) -> Event<U, Error> {
 		switch self {
 		case let .Next(value):
 			return .Next(f(value))
@@ -56,7 +56,7 @@ public enum Event<Value, Error: ErrorType> {
 	}
 
 	/// Lifts the given function over the event's error.
-	public func mapError<F>(f: Error -> F) -> Event<Value, F> {
+	public func mapError<F>(f: (Error) -> F) -> Event<Value, F> {
 		switch self {
 		case let .Next(value):
 			return .Next(value)
@@ -133,7 +133,7 @@ public protocol EventType {
 	// The value type of an event.
 	associatedtype Value
 	/// The error type of an event. If errors aren't possible then `NoError` can be used.
-	associatedtype Error: ErrorType
+	associatedtype Error: ErrorProtocol
 	/// Extracts the event from the receiver.
 	var event: Event<Value, Error> { get }
 }
